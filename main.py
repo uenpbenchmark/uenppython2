@@ -1,5 +1,4 @@
 # coding: utf-8
-# modelo de dados: 2 - Orientado a usuários
 import webapp2
 import os
 import time
@@ -19,49 +18,50 @@ class Comment(ndb.Model):
 	article = ndb.KeyProperty()
 
 class MainHandler(webapp2.RequestHandler):
-		
-		def post(self):
+
+	def post(self):
+		#1. Carrega variáveis necessárias para o workload por post
 			workload = self.request.get("workload")
 			operationcount = self.request.get("operationcount")
 			schema = self.request.get("schema")
-			writes = 0
-			reads = 0
+			writes = self.request.get("writes")
+			reads = self.request.get("reads")
 			
-			if (workload == "a"):
-				writes = 0.5 * int(operationcount)
-				reads = 0.5 * int(operationcount)
-			elif(workload == "b"):
-				writes = 0.9 *  int(operationcount)
-				reads = 0.05 * int(operationcount)
-			elif(workload == "c"):
-				writes = 0
-				reads = int(operationcount)
-			elif(workload == "w"):
-				writes =   int(operationcount)
-				reads = 0
-			
-			self.persist(writes, reads, schema)
-			
-		def persist(self, writes, reads, schema):
-			
-			user = User()
-			userKey = user.put()
-			article = Article(parent = userKey)
-			articleKey = article.put()
-			
+			#2. Armazena o tempo inicial
 			initialTime = time.clock() 
-			for writeOperations  in range(0, int(writes)):
-				if (schema == "1"):
+			
+			#3. Realiza as operações de acordo com o esquema recebido por post
+			# No Python, cria-se grupos de entidade da seguinte forma: 
+			# Crie um objeto pai; persista o objeto pai com a funcao put(), que retorna uma chave;
+			# Crie um objeto filho e passe a chave do objeto pai como parâmetro (parent = chaveDoPai)
+			if(schema == "1"):
+				
+				user = User()
+				userKey = user.put()
+				article = Article(parent = userKey)
+				articleKey = article.put()
+			
+				for writeOperations  in range(0, int(writes)):
 					comment = Comment(parent = articleKey)
 					comment.put()
-				else:
+				for readOperations  in range(0, int(reads)):
+					query = Comment.query().get()
+			
+			elif(schema == "2"):
+				#No esquema 2, o número de escritas é dividido por 2 porque a cada iteração, são inseridas 3 entidades
+				for writeOperations  in range(0, int(writes)/3):
+					user = User()
+					userKey = user.put()
+					article = Article(parent = userKey)
+					article.put()
 					comment = Comment(parent = userKey)
 					comment.put()
-			for readOperations  in range(0, int(reads)):
-				query = Comment.query().get()
+				for readOperations  in range(0, int(reads)):
+					query = Comment.query().get()
+			
 			totalTime = time.clock() - initialTime
 			
-			dictionary = {'expectedReads:': reads, 'reads': 2, 'expectedWrites': writes, 'expectedWrites': 4 ,'totalTime': totalTime }
+			dictionary = {'expectedReads:': reads, 'reads': "a implementar", 'expectedWrites': writes, 'writes': "a implementar" ,'totalTime': totalTime }
 			self.response.write(template.render('results.html', dictionary))
 
 app = webapp2.WSGIApplication([
